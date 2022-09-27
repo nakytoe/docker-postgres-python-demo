@@ -1,0 +1,46 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:14.1-alpine
+    container_name: postgres-db-1
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+  db-client:
+    depends_on:
+      - db
+    build:
+      context: ./client/
+    container_name: postgres-db-client-1
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 1s
+    ports:
+      - 8080:8080
+    volumes:
+      - ./client/:/app
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python connection.py 
+        ${POSTGRES_DB} 
+        ${POSTGRES_USER} 
+        ${POSTGRES_PASSWORD} 
+        ${POSTGRES_HOST} 
+        5432
+volumes:
+  db:
+    driver: local
+  
+  
